@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 
 # Constants
 START_OVER = 'start'
-SELECT_TOPIC = 'topic'
-SEARCH_TOPIC = 'search'
+SELECT_TOPIC = 'select_topic'
+SEARCH_TOPIC = 'search_topic'
+NEW_TOPIC = 'new_topic'
 TYPING_REPLY = 'reply'
 END = ConversationHandler.END
 
@@ -43,17 +44,21 @@ def select_topic(update, context):
     context.user_data['choice'] = text
     update.message.reply_text(
         'Your {}? Yes, I would love to hear about that!'.format(text.lower()))
-
-    return TYPING_REPLY
+    return ConversationHandler.END
 
 
 def search_topic(update, context):
-    logger.warning('Search topic"', update, context.error)
+    logger.warning('Search topic', update, context.error)
     return ConversationHandler.END
 
 
 def new_topic(update, context):
-    logger.warning('New topic"', update, context.error)
+    logger.warning('New topic', update, context.error)
+    return ConversationHandler.END
+
+
+def cancel(update, context):
+    logger.warning('Cancel', update, context.error)
     return ConversationHandler.END
 
 
@@ -69,9 +74,10 @@ def main():
         entry_points=[CommandHandler('start', start)],
         states={
             SELECT_TOPIC: [MessageHandler(Filters.regex('^(Winter|Spring|Summer|Autumn)$'), select_topic)],
+            NEW_TOPIC: [MessageHandler(Filters.regex('^(New)$'), new_topic)],
             SEARCH_TOPIC: [MessageHandler(Filters.text, select_topic)]
         },
-        fallbacks=[MessageHandler(Filters.regex('^New'), new_topic)]
+        fallbacks=[CommandHandler('cancel', cancel)]
     )
 
     dp.add_handler(conv_handler)
