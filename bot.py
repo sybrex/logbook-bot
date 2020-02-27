@@ -16,16 +16,16 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Main states
-SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC_INTRO, CREATE_TOPIC, EDIT_TOPIC = range(5)
+SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC_INTRO, CREATE_TOPIC, EDIT_TOPIC, LOOKUP_STORY = range(6)
 
 # Stories states
-SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY = range(6, 11)
+SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY, UPDATE_STORY = range(7, 13)
 
 # Constants
-TOPIC_START_OVER, START_OVER = range(11, 13)
+TOPIC_START_OVER, START_OVER = range(14, 16)
 
 # Meta states
-STOPPING, SHOWING = range(13, 15)
+STOPPING, SHOWING = range(16, 18)
 
 # Shortcut for ConversationHandler.END
 END = ConversationHandler.END
@@ -38,6 +38,8 @@ CALLBACK_BACK = 'back'
 CALLBACK_EDIT = 'edit'
 CALLBACK_SEARCH = 'search'
 CALLBACK_NEW = 'new'
+CALLBACK_LOOKUP = 'lookup'
+CALLBACK_REMOVE = 'remove'
 
 # Commands
 COMMAND_START = 'start'
@@ -54,17 +56,17 @@ def start(update, context):
     for topic in topics:
         buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
     buttons.append([
-        InlineKeyboardButton(text='Search', callback_data=CALLBACK_SEARCH),
-        InlineKeyboardButton(text='New', callback_data=CALLBACK_NEW)
+        InlineKeyboardButton(text='Search Topic', callback_data=CALLBACK_SEARCH),
+        InlineKeyboardButton(text='New Topic', callback_data=CALLBACK_NEW),
+        InlineKeyboardButton(text='Lookup Story', callback_data=CALLBACK_LOOKUP)
     ])
 
     reply_markup = InlineKeyboardMarkup(buttons)
+    text = context.user_data.pop('flash', 'Latest topics')
 
     if context.user_data.get(START_OVER):
-        text = 'Here we go again!'
         update.callback_query.edit_message_text(text=text, reply_markup=reply_markup)
     else:
-        text = 'Greetings'
         update.message.reply_text(text=text, reply_markup=reply_markup)
 
     context.user_data[START_OVER] = False
@@ -80,7 +82,6 @@ def edit_topic(update, context):
         [InlineKeyboardButton(text='Video', callback_data=CALLBACK_VIDEO),
          InlineKeyboardButton(text='Photo', callback_data=CALLBACK_PHOTO),
          InlineKeyboardButton(text='Text', callback_data=CALLBACK_TEXT),
-         InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
          InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)]
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -119,8 +120,9 @@ def search_topic(update, context):
     for topic in topics:
         buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
     buttons.append([
-        InlineKeyboardButton(text='Search', callback_data=CALLBACK_SEARCH),
-        InlineKeyboardButton(text='New', callback_data=CALLBACK_NEW)
+        InlineKeyboardButton(text='Search Topic', callback_data=CALLBACK_SEARCH),
+        InlineKeyboardButton(text='New Topic', callback_data=CALLBACK_NEW),
+        InlineKeyboardButton(text='Lookup Story', callback_data=CALLBACK_LOOKUP)
     ])
 
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -137,9 +139,80 @@ def create_topic_intro(update, context):
     return CREATE_TOPIC
 
 
+def lookup_story_intro(update, context):
+    logger.info('Lookup story')
+    text = 'Input story ID'
+    update.callback_query.edit_message_text(text=text)
+    return LOOKUP_STORY
+
+
 def create_topic(update, context):
     logger.info('Saving new topic %s', update.message.text)
+    context.user_data['flash'] = 'New topic was created'
     return start(update, context)
+
+
+def edit_story_intro(update, context):
+    logger.info('Edit story description')
+    text = 'Input story description'
+    update.callback_query.edit_message_text(text=text)
+    return UPDATE_STORY
+
+
+def lookup_story(update, context):
+    logger.info('Lookup story ID: %s', update.message.text)
+    logger.info('Update: %s', update)
+    story_id = int(update.message.text)
+    context.user_data['story_id'] = story_id
+    story = logbook.lookup_story(story_id)
+
+    if story:
+        text = story['description']
+        buttons = [[
+            InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE),
+            InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
+            InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
+        ]]
+    else:
+        text = f'Story {story_id} was not found'
+        buttons = [[
+            InlineKeyboardButton(text='Lookup again', callback_data=CALLBACK_LOOKUP),
+            InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
+        ]]
+
+    reply_markup = InlineKeyboardMarkup(buttons)
+    update.message.reply_text(text=text, reply_markup=reply_markup)
+
+    return EDIT_STORY
+
+
+def update_story(update, context):
+    logger.info('Update story', update.message.text)
+    logger.info('Update: %s', update)
+
+    # TODO: update story description
+    story_id = context.user_data.get('story_id')
+    story_description = update.message.text
+
+    text = story_description
+    buttons = [[
+        InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE),
+        InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
+        InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
+    ]]
+
+    reply_markup = InlineKeyboardMarkup(buttons)
+    update.message.reply_text(text=text, reply_markup=reply_markup)
+
+    return EDIT_STORY
+
+
+def remove_story(update, context):
+    logger.info('Remove story')
+    # TODO: Remove the story
+    story_id = context.user_data.pop('story_id', None)
+    context.user_data['flash'] = f'Story #{story_id} was removed'
+    return close_story(update, context)
 
 
 def close_topic(update, context):
@@ -149,19 +222,16 @@ def close_topic(update, context):
     return END
 
 
-def edit_topic_story(update, context):
-    logger.info('Editing topic story')
-    return EDIT_STORY
-
-
 def video_story(update, context):
     logger.info('Video story')
-    return END
+    context.user_data[TOPIC_START_OVER] = True
+    return edit_topic(update, context)
 
 
 def photo_story(update, context):
     logger.info('Photo story')
-    return END
+    context.user_data[TOPIC_START_OVER] = True
+    return edit_topic(update, context)
 
 
 def text_story(update, context):
@@ -187,9 +257,10 @@ def ask_for_story(update, context):
         return PHOTO_STORY
 
 
-def search_story(update, context):
-    logger.info('Search for story')
-    return EDIT_STORY
+def close_story(update, context):
+    logger.info('Closing story')
+    context.user_data[START_OVER] = True
+    return start(update, context)
 
 
 def close_nested(update, context):
@@ -216,10 +287,8 @@ def main():
         states={
             SELECT_STORY_TYPE: [
                 CallbackQueryHandler(ask_for_story, pattern=f'^{CALLBACK_TEXT}|{CALLBACK_PHOTO}|{CALLBACK_VIDEO}$'),
-                CallbackQueryHandler(edit_topic_story, pattern=f'^{CALLBACK_EDIT}$'),
                 CallbackQueryHandler(close_topic, pattern=f'^{CALLBACK_BACK}$')
             ],
-            EDIT_STORY: [MessageHandler(Filters.text, search_story)],
             VIDEO_STORY: [MessageHandler(Filters.video, video_story)],
             PHOTO_STORY: [MessageHandler(Filters.photo, photo_story)],
             TEXT_STORY: [MessageHandler(Filters.text, text_story)]
@@ -240,10 +309,19 @@ def main():
             SELECT_TOPIC: [
                 topic_conv,
                 CallbackQueryHandler(search_topic_intro, pattern=f'^{CALLBACK_SEARCH}$'),
-                CallbackQueryHandler(create_topic_intro, pattern=f'^{CALLBACK_NEW}$')
+                CallbackQueryHandler(create_topic_intro, pattern=f'^{CALLBACK_NEW}$'),
+                CallbackQueryHandler(lookup_story_intro, pattern=f'^{CALLBACK_LOOKUP}$'),
+            ],
+            EDIT_STORY: [
+                CallbackQueryHandler(lookup_story_intro, pattern=f'^{CALLBACK_LOOKUP}$'),
+                CallbackQueryHandler(edit_story_intro, pattern=f'^{CALLBACK_EDIT}$'),
+                CallbackQueryHandler(remove_story, pattern=f'^{CALLBACK_REMOVE}$'),
+                CallbackQueryHandler(close_story, pattern=f'^{CALLBACK_BACK}$')
             ],
             SEARCH_TOPIC: [MessageHandler(Filters.text, search_topic)],
-            CREATE_TOPIC: [MessageHandler(Filters.text, create_topic)]
+            CREATE_TOPIC: [MessageHandler(Filters.text, create_topic)],
+            LOOKUP_STORY: [MessageHandler(Filters.text, lookup_story)],
+            UPDATE_STORY: [MessageHandler(Filters.text, update_story)],
         },
         fallbacks=[CommandHandler(COMMAND_EXIT, end)]
     )

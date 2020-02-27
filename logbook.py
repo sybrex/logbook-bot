@@ -16,5 +16,28 @@ def search_topics(name):
     return topics
 
 
+def lookup_story(id):
+    if id == 111:
+        story = {
+            'id': 3,
+            'type': 1,
+            'description': 'Super story',
+            'topic': {
+                'id': 1010,
+                'title': 'Football match',
+                'created': '2020-02-20T14:14:04.122992Z'
+            },
+            'user': {
+                'id': 3,
+                'name': 'Jane',
+                'phone': '380937861234',
+                'status': 1
+            },
+            'content': 'img.jpg',
+            'created': '2020-02-20T15:57:15.865215Z'
+        }
+        return story
+
+
 def get_topic_by_id(topics, id):
     return next((topic for topic in topics if topic['id'] == id), None)
