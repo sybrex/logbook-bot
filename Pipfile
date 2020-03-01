@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 python-telegram-bot = "*"
 configparser = "*"
+requests = "*"
 
 [requires]
 python_version = "3.7"

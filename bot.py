@@ -1,15 +1,8 @@
-import os
 import logging
 import logbook
-from configparser import RawConfigParser
 from telegram import (InlineKeyboardMarkup, InlineKeyboardButton)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackQueryHandler)
-
-
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-
-env = RawConfigParser()
-env.read(BASE_DIR + '/env.ini')
+import settings
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -278,7 +271,7 @@ def error(update, context):
 
 
 def main():
-    updater = Updater(env['telegram']['token'], use_context=True)
+    updater = Updater(settings.TELEGRAM_TOKEN, use_context=True)
     dp = updater.dispatcher
 
     # Edit topic stories conversation
