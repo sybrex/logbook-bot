@@ -14,6 +14,11 @@ def search_topics(title):
     return api(url)
 
 
+def get_topic_stories(topic_id):
+    url = f'{settings.API_HOST}/stories/?topic={topic_id}&format=json'
+    return api(url)
+
+
 def lookup_story(id):
     url = f'{settings.API_HOST}/stories/{id}?format=json'
     return api(url)
