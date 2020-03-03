@@ -43,11 +43,12 @@ def start(update, context):
     logger.info('Starting')
     logger.info('Update: %s', update)
 
-    topics = logbook.get_latest_topics()
-    context.user_data['topics'] = topics
     buttons = []
-    for topic in topics:
-        buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
+    topics = logbook.get_latest_topics()
+    if topics['status']:
+        context.user_data['topics'] = topics['data']
+        for topic in topics['data']:
+            buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
     buttons.append([
         InlineKeyboardButton(text='Search Topic', callback_data=CALLBACK_SEARCH),
         InlineKeyboardButton(text='New Topic', callback_data=CALLBACK_NEW),
@@ -106,12 +107,13 @@ def search_topic_intro(update, context):
 def search_topic(update, context):
     logger.info('Searching for topic')
     logger.info('Update: %s', update)
-    topics = logbook.search_topics(update.message.text)
-    context.user_data['topics'] = topics
 
     buttons = []
-    for topic in topics:
-        buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
+    topics = logbook.search_topics(update.message.text)
+    if topics['status']:
+        context.user_data['topics'] = topics['data']
+        for topic in topics['data']:
+            buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
     buttons.append([
         InlineKeyboardButton(text='Search Topic', callback_data=CALLBACK_SEARCH),
         InlineKeyboardButton(text='New Topic', callback_data=CALLBACK_NEW),
@@ -119,7 +121,8 @@ def search_topic(update, context):
     ])
 
     reply_markup = InlineKeyboardMarkup(buttons)
-    update.message.reply_text(text='Search results', reply_markup=reply_markup)
+    text = 'Search results' if topics['status'] and len(topics['data']) > 0 else 'Nothing found, try again'
+    update.message.reply_text(text=text, reply_markup=reply_markup)
     context.user_data[START_OVER] = False
 
     return SELECT_TOPIC
@@ -141,7 +144,11 @@ def lookup_story_intro(update, context):
 
 def create_topic(update, context):
     logger.info('Saving new topic %s', update.message.text)
-    context.user_data['flash'] = 'New topic was created'
+    topic = logbook.create_topic(update.message.text)
+    if topic['status']:
+        context.user_data['flash'] = 'New topic was created'
+    else:
+        context.user_data['flash'] = topic['error']
     return start(update, context)
 
 
