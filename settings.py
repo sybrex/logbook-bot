@@ -9,3 +9,4 @@ env.read(BASE_DIR + '/env.ini')
 
 TELEGRAM_TOKEN = env['telegram']['token']
 API_HOST = env['api']['host']
+REGISTRATION_CODE = env['telegram']['code']

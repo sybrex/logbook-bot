@@ -8,17 +8,22 @@ import settings
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+TYPE_IMAGE = 1
+TYPE_ALBUM = 2
+TYPE_VIDEO = 3
+TYPE_TEXT = 4
+
 # Main states
-SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC_INTRO, CREATE_TOPIC, EDIT_TOPIC, LOOKUP_STORY = range(6)
+REGISTER, SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC_INTRO, CREATE_TOPIC, EDIT_TOPIC, LOOKUP_STORY = range(7)
 
 # Stories states
-SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY, UPDATE_STORY = range(7, 13)
+SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY, UPDATE_STORY = range(8, 14)
 
 # Constants
-TOPIC_START_OVER, START_OVER = range(14, 16)
+TOPIC_START_OVER, START_OVER = range(15, 17)
 
 # Meta states
-STOPPING, SHOWING = range(16, 18)
+STOPPING, SHOWING = range(18, 20)
 
 # Shortcut for ConversationHandler.END
 END = ConversationHandler.END
@@ -41,6 +46,14 @@ COMMAND_EXIT = 'exit'
 
 def start(update, context):
     logger.info('Starting')
+
+    if not context.user_data.get('user'):
+        logger.info(f'Fetch user from API #{update.effective_user.id}')
+        user = logbook.get_telegram_user(update.effective_user.id)
+        if user['status']:
+            context.user_data['user'] = user['data']
+        else:
+            return greeting(update, context)
 
     buttons = []
     topics = logbook.get_latest_topics()
@@ -65,6 +78,37 @@ def start(update, context):
     context.user_data[START_OVER] = False
 
     return SELECT_TOPIC
+
+
+def greeting(update, context):
+    logger.info('Greeting')
+
+    text = 'Greetings!\nType the registration code'
+    update.message.reply_text(text=text)
+    return REGISTER
+
+
+def register(update, context):
+    logger.info('Register')
+
+    if update.message.text == settings.REGISTRATION_CODE:
+        data = {
+            'telegram_id': update.effective_user.id,
+            'first_name': update.effective_user.first_name,
+            'last_name': update.effective_user.last_name,
+            'username': update.effective_user.username
+        }
+        result = logbook.create_user(data)
+        if result['status']:
+            context.user_data['user'] = result['data']
+            return start(update, context)
+        else:
+            logger.error(f"Registration. {result['error']}")
+            return END
+    else:
+        text = 'Wrong registration code. Try again'
+        update.message.reply_text(text=text)
+        return REGISTER
 
 
 def edit_topic(update, context):
@@ -169,7 +213,8 @@ def lookup_story(update, context):
     story = logbook.lookup_story(story_id)
 
     if story['status']:
-        text = story['data']['description']
+        text = f"Story #{story['data']['id']}"
+        # TODO: display more info about the story
         buttons = [[
             InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE),
             InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
@@ -250,6 +295,20 @@ def photo_story(update, context):
 def text_story(update, context):
     logger.info('Saving text story: %s', update.message.text)
 
+    data = {
+        'type': TYPE_TEXT,
+        'description': '',
+        'topic': context.user_data['topic_id'],
+        'user': context.user_data['user']['id'],
+        'content': update.message.text
+    }
+    result = logbook.create_story(data)
+
+    if result['status']:
+        context.user_data['flash'] = 'Story created'
+    else:
+        logger.error(f"Text story create. {result['error']}")
+
     context.user_data[TOPIC_START_OVER] = True
     return edit_topic(update, context)
 
@@ -291,7 +350,7 @@ def end(update, context):
 
 
 def error(update, context):
-    logger.error('%s with update %s', context.error, update)
+    logger.error('%s with update \n%s', context.error, update)
 
 
 def main():
@@ -335,6 +394,7 @@ def main():
                 CallbackQueryHandler(remove_story, pattern=f'^{CALLBACK_REMOVE}$'),
                 CallbackQueryHandler(close_story, pattern=f'^{CALLBACK_BACK}$')
             ],
+            REGISTER: [MessageHandler(Filters.text, register)],
             SEARCH_TOPIC: [MessageHandler(Filters.text, search_topic)],
             CREATE_TOPIC: [MessageHandler(Filters.text, create_topic)],
             LOOKUP_STORY: [MessageHandler(Filters.text, lookup_story)],

@@ -4,6 +4,37 @@ from requests.exceptions import HTTPError
 import settings
 
 
+def create_user(user):
+    url = f'{settings.API_HOST}/users/?format=json'
+    try:
+        response = requests.post(url, data=user)
+        response.raise_for_status()
+    except HTTPError as http_err:
+        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
+    except Exception as err:
+        return {'status': False, 'error': f'API error occurred: {err}'}
+    else:
+        data = json.loads(response.text)
+        return {'status': True, 'data': data}
+
+
+def get_telegram_user(id):
+    url = f'{settings.API_HOST}/users?search={id}&format=json'
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+    except HTTPError as http_err:
+        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
+    except Exception as err:
+        return {'status': False, 'error': f'API error occurred: {err}'}
+    else:
+        data = json.loads(response.text)
+        if len(data) == 0:
+            return {'status': False}
+        else:
+            return {'status': True, 'data': data[0]}
+
+
 def get_latest_topics():
     url = f'{settings.API_HOST}/topics?format=json'
     return api(url)
@@ -36,6 +67,7 @@ def remove_story(id):
     else:
         return {'status': True}
 
+
 def update_story(id, data):
     url = f'{settings.API_HOST}/stories/{id}/?format=json'
     try:
@@ -54,6 +86,20 @@ def create_topic(title):
     url = f'{settings.API_HOST}/topics/?format=json'
     try:
         response = requests.post(url, data={'title': title})
+        response.raise_for_status()
+    except HTTPError as http_err:
+        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
+    except Exception as err:
+        return {'status': False, 'error': f'API error occurred: {err}'}
+    else:
+        data = json.loads(response.text)
+        return {'status': True, 'data': data}
+
+
+def create_story(story):
+    url = f'{settings.API_HOST}/stories/?format=json'
+    try:
+        response = requests.post(url, data=story)
         response.raise_for_status()
     except HTTPError as http_err:
         return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
