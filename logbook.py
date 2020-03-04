@@ -24,6 +24,32 @@ def lookup_story(id):
     return api(url)
 
 
+def remove_story(id):
+    url = f'{settings.API_HOST}/stories/{id}/?format=json'
+    try:
+        response = requests.delete(url)
+        response.raise_for_status()
+    except HTTPError as http_err:
+        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
+    except Exception as err:
+        return {'status': False, 'error': f'API error occurred: {err}'}
+    else:
+        return {'status': True}
+
+def update_story(id, data):
+    url = f'{settings.API_HOST}/stories/{id}/?format=json'
+    try:
+        response = requests.put(url, data=data)
+        response.raise_for_status()
+    except HTTPError as http_err:
+        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
+    except Exception as err:
+        return {'status': False, 'error': f'API error occurred: {err}'}
+    else:
+        data = json.loads(response.text)
+        return {'status': True, 'data': data}
+
+
 def create_topic(title):
     url = f'{settings.API_HOST}/topics/?format=json'
     try:

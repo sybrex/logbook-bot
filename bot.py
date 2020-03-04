@@ -41,7 +41,6 @@ COMMAND_EXIT = 'exit'
 
 def start(update, context):
     logger.info('Starting')
-    logger.info('Update: %s', update)
 
     buttons = []
     topics = logbook.get_latest_topics()
@@ -70,7 +69,6 @@ def start(update, context):
 
 def edit_topic(update, context):
     logger.info('Editing topic')
-    logger.info('Update: %s', update)
 
     buttons = [
         [InlineKeyboardButton(text='Video', callback_data=CALLBACK_VIDEO),
@@ -98,7 +96,8 @@ def edit_topic(update, context):
 
 
 def search_topic_intro(update, context):
-    logger.info('Search topic')
+    logger.info('Search topic intro')
+
     text = 'Type the topic name to search'
     update.callback_query.edit_message_text(text=text)
     return SEARCH_TOPIC
@@ -106,7 +105,6 @@ def search_topic_intro(update, context):
 
 def search_topic(update, context):
     logger.info('Searching for topic')
-    logger.info('Update: %s', update)
 
     buttons = []
     topics = logbook.search_topics(update.message.text)
@@ -129,14 +127,16 @@ def search_topic(update, context):
 
 
 def create_topic_intro(update, context):
-    logger.info('New topic')
+    logger.info('New topic intro')
+
     text = 'Okay, type the new topic name'
     update.callback_query.edit_message_text(text=text)
     return CREATE_TOPIC
 
 
 def lookup_story_intro(update, context):
-    logger.info('Lookup story')
+    logger.info('Lookup story intro')
+
     text = 'Input story ID'
     update.callback_query.edit_message_text(text=text)
     return LOOKUP_STORY
@@ -144,6 +144,7 @@ def lookup_story_intro(update, context):
 
 def create_topic(update, context):
     logger.info('Saving new topic %s', update.message.text)
+
     topic = logbook.create_topic(update.message.text)
     if topic['status']:
         context.user_data['flash'] = 'New topic was created'
@@ -153,7 +154,8 @@ def create_topic(update, context):
 
 
 def edit_story_intro(update, context):
-    logger.info('Edit story description')
+    logger.info('Edit story description intro')
+
     text = 'Input story description'
     update.callback_query.edit_message_text(text=text)
     return UPDATE_STORY
@@ -161,13 +163,13 @@ def edit_story_intro(update, context):
 
 def lookup_story(update, context):
     logger.info('Lookup story ID: %s', update.message.text)
-    logger.info('Update: %s', update)
+
     story_id = int(update.message.text)
     context.user_data['story_id'] = story_id
     story = logbook.lookup_story(story_id)
 
-    if story:
-        text = story['description']
+    if story['status']:
+        text = story['data']['description']
         buttons = [[
             InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE),
             InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
@@ -175,6 +177,7 @@ def lookup_story(update, context):
         ]]
     else:
         text = f'Story {story_id} was not found'
+        logger.info('Lookup story error %s', story['error'])
         buttons = [[
             InlineKeyboardButton(text='Lookup again', callback_data=CALLBACK_LOOKUP),
             InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
@@ -188,13 +191,15 @@ def lookup_story(update, context):
 
 def update_story(update, context):
     logger.info('Update story', update.message.text)
-    logger.info('Update: %s', update)
 
-    # TODO: update story description
     story_id = context.user_data.get('story_id')
     story_description = update.message.text
-
-    text = story_description
+    result = logbook.update_story(story_id, {'description': story_description})
+    if result['status']:
+        text = f"Successfully Updated.\n{result['data']['description']}"
+    else:
+        text = f'Could not update the story. Please try again.\n{story_description}'
+        logger.error(f"Update story. {result['error']}")
     buttons = [[
         InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE),
         InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
@@ -209,14 +214,20 @@ def update_story(update, context):
 
 def remove_story(update, context):
     logger.info('Remove story')
-    # TODO: Remove the story
+
     story_id = context.user_data.pop('story_id', None)
-    context.user_data['flash'] = f'Story #{story_id} was removed'
+    result = logbook.remove_story(story_id)
+    if result['status']:
+        context.user_data['flash'] = f'Story #{story_id} was removed'
+    else:
+        context.user_data['flash'] = f'Could not remove the story #{story_id}'
+        logger.error(f"Remove story. {result['error']}")
     return close_story(update, context)
 
 
 def close_topic(update, context):
     logger.info('Closing topic')
+
     context.user_data[START_OVER] = True
     start(update, context)
     return END
@@ -224,25 +235,28 @@ def close_topic(update, context):
 
 def video_story(update, context):
     logger.info('Video story')
+
     context.user_data[TOPIC_START_OVER] = True
     return edit_topic(update, context)
 
 
 def photo_story(update, context):
     logger.info('Photo story')
+
     context.user_data[TOPIC_START_OVER] = True
     return edit_topic(update, context)
 
 
 def text_story(update, context):
     logger.info('Saving text story: %s', update.message.text)
+
     context.user_data[TOPIC_START_OVER] = True
     return edit_topic(update, context)
 
 
 def ask_for_story(update, context):
     logger.info('Asking for story')
-    logger.info('Update: %s', update)
+
     if update.callback_query.data == CALLBACK_TEXT:
         text = 'Tell your story'
         update.callback_query.edit_message_text(text=text)
@@ -259,11 +273,14 @@ def ask_for_story(update, context):
 
 def close_story(update, context):
     logger.info('Closing story')
+
     context.user_data[START_OVER] = True
     return start(update, context)
 
 
 def close_nested(update, context):
+    logger.info('Close nested')
+
     update.message.reply_text('Okay, bye.')
     return STOPPING
 
@@ -274,7 +291,7 @@ def end(update, context):
 
 
 def error(update, context):
-    logger.error('Update "%s" caused error "%s"', update, context.error)
+    logger.error('%s with update %s', context.error, update)
 
 
 def main():
