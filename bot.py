@@ -37,7 +37,8 @@ CALLBACK_EDIT = 'edit'
 CALLBACK_SEARCH = 'search'
 CALLBACK_NEW = 'new'
 CALLBACK_LOOKUP = 'lookup'
-CALLBACK_REMOVE = 'remove'
+CALLBACK_REMOVE_TOPIC = 'remove_topic'
+CALLBACK_REMOVE_STORY = 'remove_story'
 
 # Commands
 COMMAND_START = 'start'
@@ -114,24 +115,36 @@ def register(update, context):
 def edit_topic(update, context):
     logger.info('Editing topic')
 
-    buttons = [
-        [InlineKeyboardButton(text='Video', callback_data=CALLBACK_VIDEO),
-         InlineKeyboardButton(text='Photo', callback_data=CALLBACK_PHOTO),
-         InlineKeyboardButton(text='Text', callback_data=CALLBACK_TEXT),
-         InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)]
-    ]
-    reply_markup = InlineKeyboardMarkup(buttons)
-
     if context.user_data.get(TOPIC_START_OVER):
         topic_id = context.user_data.get('topic_id')
         topic = logbook.get_topic_by_id(context.user_data.get('topics'), topic_id)
-        text = 'Got it!\n' + topic['title']
+        stories_count = logbook.get_topic_stories_count(topic_id)
+        buttons = [
+            [InlineKeyboardButton(text='Video', callback_data=CALLBACK_VIDEO),
+             InlineKeyboardButton(text='Photo', callback_data=CALLBACK_PHOTO),
+             InlineKeyboardButton(text='Text', callback_data=CALLBACK_TEXT)],
+            [InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)]
+        ]
+        if stories_count == 0:
+            buttons[1].append(InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_TOPIC))
+        reply_markup = InlineKeyboardMarkup(buttons)
+        text = f"Got it!\n{topic['title']} ({stories_count})"
         update.message.reply_text(text=text, reply_markup=reply_markup)
     else:
         topic_id = int(update.callback_query.data)
         context.user_data['topic_id'] = topic_id
         topic = logbook.get_topic_by_id(context.user_data.get('topics'), topic_id)
-        text = topic['title']
+        stories_count = logbook.get_topic_stories_count(topic_id)
+        buttons = [
+            [InlineKeyboardButton(text='Video', callback_data=CALLBACK_VIDEO),
+             InlineKeyboardButton(text='Photo', callback_data=CALLBACK_PHOTO),
+             InlineKeyboardButton(text='Text', callback_data=CALLBACK_TEXT)],
+            [InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)]
+        ]
+        if stories_count == 0:
+            buttons[1].append(InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_TOPIC))
+        reply_markup = InlineKeyboardMarkup(buttons)
+        text = f"{topic['title']} ({stories_count})"
         update.callback_query.edit_message_text(text=text, reply_markup=reply_markup)
 
     context.user_data[TOPIC_START_OVER] = False
@@ -216,7 +229,7 @@ def lookup_story(update, context):
         text = f"Story #{story['data']['id']}"
         # TODO: display more info about the story
         buttons = [[
-            InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE),
+            InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_STORY),
             InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
             InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
         ]]
@@ -246,7 +259,7 @@ def update_story(update, context):
         text = f'Could not update the story. Please try again.\n{story_description}'
         logger.error(f"Update story. {result['error']}")
     buttons = [[
-        InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE),
+        InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_STORY),
         InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
         InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
     ]]
@@ -268,6 +281,19 @@ def remove_story(update, context):
         context.user_data['flash'] = f'Could not remove the story #{story_id}'
         logger.error(f"Remove story. {result['error']}")
     return close_story(update, context)
+
+
+def remove_topic(update, context):
+    logger.info('Remove topic')
+
+    topic_id = context.user_data.pop('topic_id', None)
+    result = logbook.remove_topic(topic_id)
+    if result['status']:
+        context.user_data['flash'] = f'Topic #{topic_id} was removed'
+    else:
+        context.user_data['flash'] = f'Could not remove the topic #{topic_id}'
+        logger.error(f"Remove topic. {result['error']}")
+    return close_topic(update, context)
 
 
 def close_topic(update, context):
@@ -363,6 +389,7 @@ def main():
         states={
             SELECT_STORY_TYPE: [
                 CallbackQueryHandler(ask_for_story, pattern=f'^{CALLBACK_TEXT}|{CALLBACK_PHOTO}|{CALLBACK_VIDEO}$'),
+                CallbackQueryHandler(remove_topic, pattern=f'^{CALLBACK_REMOVE_TOPIC}$'),
                 CallbackQueryHandler(close_topic, pattern=f'^{CALLBACK_BACK}$')
             ],
             VIDEO_STORY: [MessageHandler(Filters.video, video_story)],
@@ -391,7 +418,7 @@ def main():
             EDIT_STORY: [
                 CallbackQueryHandler(lookup_story_intro, pattern=f'^{CALLBACK_LOOKUP}$'),
                 CallbackQueryHandler(edit_story_intro, pattern=f'^{CALLBACK_EDIT}$'),
-                CallbackQueryHandler(remove_story, pattern=f'^{CALLBACK_REMOVE}$'),
+                CallbackQueryHandler(remove_story, pattern=f'^{CALLBACK_REMOVE_STORY}$'),
                 CallbackQueryHandler(close_story, pattern=f'^{CALLBACK_BACK}$')
             ],
             REGISTER: [MessageHandler(Filters.text, register)],

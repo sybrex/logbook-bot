@@ -50,6 +50,14 @@ def get_topic_stories(topic_id):
     return api(url)
 
 
+def get_topic_stories_count(topic_id):
+    stories = get_topic_stories(topic_id)
+    count = 0
+    if stories['status']:
+        count = len(stories['data'])
+    return count
+
+
 def lookup_story(id):
     url = f'{settings.API_HOST}/stories/{id}?format=json'
     return api(url)
@@ -57,6 +65,19 @@ def lookup_story(id):
 
 def remove_story(id):
     url = f'{settings.API_HOST}/stories/{id}/?format=json'
+    try:
+        response = requests.delete(url)
+        response.raise_for_status()
+    except HTTPError as http_err:
+        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
+    except Exception as err:
+        return {'status': False, 'error': f'API error occurred: {err}'}
+    else:
+        return {'status': True}
+
+
+def remove_topic(id):
+    url = f'{settings.API_HOST}/topics/{id}/?format=json'
     try:
         response = requests.delete(url)
         response.raise_for_status()
