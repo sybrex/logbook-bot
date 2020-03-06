@@ -1,3 +1,4 @@
+import os
 import logging
 import logbook
 from telegram import (InlineKeyboardMarkup, InlineKeyboardButton)
@@ -8,7 +9,7 @@ import settings
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TYPE_IMAGE = 1
+TYPE_PHOTO = 1
 TYPE_ALBUM = 2
 TYPE_VIDEO = 3
 TYPE_TEXT = 4
@@ -313,6 +314,21 @@ def video_story(update, context):
 
 def photo_story(update, context):
     logger.info('Photo story')
+
+    photo_file = update.message.photo[-1].get_file()
+    data = {
+        'type': TYPE_PHOTO,
+        'description': update.message.caption,
+        'topic': context.user_data['topic_id'],
+        'user': context.user_data['user']['id'],
+        'content': photo_file.file_path
+    }
+    result = logbook.create_story(data)
+
+    if result['status']:
+        context.user_data['flash'] = 'Story created'
+    else:
+        logger.error(f"Text story create. {result['error']}")
 
     context.user_data[TOPIC_START_OVER] = True
     return edit_topic(update, context)
