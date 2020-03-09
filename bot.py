@@ -308,6 +308,21 @@ def close_topic(update, context):
 def video_story(update, context):
     logger.info('Video story')
 
+    video_file = update.message.video.get_file()
+    data = {
+        'type': TYPE_VIDEO,
+        'description': update.message.caption,
+        'topic': context.user_data['topic_id'],
+        'user': context.user_data['user']['id'],
+        'content': video_file.file_path
+    }
+    result = logbook.create_story(data)
+
+    if result['status']:
+        context.user_data['flash'] = 'Story created'
+    else:
+        logger.error(f"Text story create. {result['error']}")
+
     context.user_data[TOPIC_START_OVER] = True
     return edit_topic(update, context)
 
