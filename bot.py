@@ -222,13 +222,19 @@ def edit_story_intro(update, context):
 def lookup_story(update, context):
     logger.info('Lookup story ID: %s', update.message.text)
 
-    story_id = int(update.message.text)
-    context.user_data['story_id'] = story_id
-    story = logbook.lookup_story(story_id)
+    try:
+        story_id = int(update.message.text)
+        context.user_data['story_id'] = story_id
+        story = logbook.lookup_story(story_id)
+    except ValueError as _:
+        story_id = update.message.text
+        story = {
+            'status': False,
+            'error': 'Invalid story ID'
+        }
 
     if story['status']:
         text = f"Story #{story['data']['id']}"
-        # TODO: display more info about the story
         buttons = [[
             InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_STORY),
             InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
