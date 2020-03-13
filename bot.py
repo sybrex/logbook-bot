@@ -1,11 +1,17 @@
 import os
 import logging
 import logbook
+import gettext
 from telegram import (InlineKeyboardMarkup, InlineKeyboardButton)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackQueryHandler)
 import settings
 
-# Enable logging
+
+# i18n
+trans = gettext.translation('bot', './i18n', languages=[settings.LANG], fallback=True)
+trans.install()
+
+# logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -64,13 +70,13 @@ def start(update, context):
         for topic in topics['data']:
             buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
     buttons.append([
-        InlineKeyboardButton(text='Search Topic', callback_data=CALLBACK_SEARCH),
-        InlineKeyboardButton(text='New Topic', callback_data=CALLBACK_NEW),
-        InlineKeyboardButton(text='Lookup Story', callback_data=CALLBACK_LOOKUP)
+        InlineKeyboardButton(text=_('search-topic'), callback_data=CALLBACK_SEARCH),
+        InlineKeyboardButton(text=_('new-topic'), callback_data=CALLBACK_NEW),
+        InlineKeyboardButton(text=_('lookup-story'), callback_data=CALLBACK_LOOKUP)
     ])
 
     reply_markup = InlineKeyboardMarkup(buttons)
-    text = context.user_data.pop('flash', 'Latest topics')
+    text = context.user_data.pop('flash', _('latest-topics'))
 
     if context.user_data.get(START_OVER):
         update.callback_query.edit_message_text(text=text, reply_markup=reply_markup)
@@ -85,7 +91,7 @@ def start(update, context):
 def greeting(update, context):
     logger.info('Greeting')
 
-    text = 'Greetings!\nType the registration code'
+    text = _('greetings') + '\n' + _('input-registration-code')
     update.message.reply_text(text=text)
     return REGISTER
 
@@ -105,10 +111,10 @@ def register(update, context):
             context.user_data['user'] = result['data']
             return start(update, context)
         else:
-            logger.error(f"Registration. {result['error']}")
+            logger.error(_('registration-error') + '\n' + result['error'])
             return END
     else:
-        text = 'Wrong registration code. Try again'
+        text = _('wrong-registration-code')
         update.message.reply_text(text=text)
         return REGISTER
 
@@ -121,15 +127,15 @@ def edit_topic(update, context):
         topic = logbook.get_topic_by_id(context.user_data.get('topics'), topic_id)
         stories_count = logbook.get_topic_stories_count(topic_id)
         buttons = [
-            [InlineKeyboardButton(text='Video', callback_data=CALLBACK_VIDEO),
-             InlineKeyboardButton(text='Photo', callback_data=CALLBACK_PHOTO),
-             InlineKeyboardButton(text='Text', callback_data=CALLBACK_TEXT)],
-            [InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)]
+            [InlineKeyboardButton(text=_('video'), callback_data=CALLBACK_VIDEO),
+             InlineKeyboardButton(text=_('photo'), callback_data=CALLBACK_PHOTO),
+             InlineKeyboardButton(text=_('text'), callback_data=CALLBACK_TEXT)],
+            [InlineKeyboardButton(text=_('back'), callback_data=CALLBACK_BACK)]
         ]
         if stories_count == 0:
-            buttons[1].append(InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_TOPIC))
+            buttons[1].append(InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_TOPIC))
         reply_markup = InlineKeyboardMarkup(buttons)
-        text = f"Got it!\n{topic['title']} ({stories_count})"
+        text = f"{topic['title']} ({stories_count})"
         update.message.reply_text(text=text, reply_markup=reply_markup)
     else:
         topic_id = int(update.callback_query.data)
@@ -137,13 +143,13 @@ def edit_topic(update, context):
         topic = logbook.get_topic_by_id(context.user_data.get('topics'), topic_id)
         stories_count = logbook.get_topic_stories_count(topic_id)
         buttons = [
-            [InlineKeyboardButton(text='Video', callback_data=CALLBACK_VIDEO),
-             InlineKeyboardButton(text='Photo', callback_data=CALLBACK_PHOTO),
-             InlineKeyboardButton(text='Text', callback_data=CALLBACK_TEXT)],
-            [InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)]
+            [InlineKeyboardButton(text=_('video'), callback_data=CALLBACK_VIDEO),
+             InlineKeyboardButton(text=_('photo'), callback_data=CALLBACK_PHOTO),
+             InlineKeyboardButton(text=_('text'), callback_data=CALLBACK_TEXT)],
+            [InlineKeyboardButton(text=_('back'), callback_data=CALLBACK_BACK)]
         ]
         if stories_count == 0:
-            buttons[1].append(InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_TOPIC))
+            buttons[1].append(InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_TOPIC))
         reply_markup = InlineKeyboardMarkup(buttons)
         text = f"{topic['title']} ({stories_count})"
         update.callback_query.edit_message_text(text=text, reply_markup=reply_markup)
@@ -156,7 +162,7 @@ def edit_topic(update, context):
 def search_topic_intro(update, context):
     logger.info('Search topic intro')
 
-    text = 'Type the topic name to search'
+    text = _('type-topic-name-to-search')
     update.callback_query.edit_message_text(text=text)
     return SEARCH_TOPIC
 
@@ -171,13 +177,13 @@ def search_topic(update, context):
         for topic in topics['data']:
             buttons.append([InlineKeyboardButton(text=topic['title'], callback_data=topic['id'])])
     buttons.append([
-        InlineKeyboardButton(text='Search Topic', callback_data=CALLBACK_SEARCH),
-        InlineKeyboardButton(text='New Topic', callback_data=CALLBACK_NEW),
-        InlineKeyboardButton(text='Lookup Story', callback_data=CALLBACK_LOOKUP)
+        InlineKeyboardButton(text=_('search-topic'), callback_data=CALLBACK_SEARCH),
+        InlineKeyboardButton(text=_('new-topic'), callback_data=CALLBACK_NEW),
+        InlineKeyboardButton(text=_('lookup-story'), callback_data=CALLBACK_LOOKUP)
     ])
 
     reply_markup = InlineKeyboardMarkup(buttons)
-    text = 'Search results' if topics['status'] and len(topics['data']) > 0 else 'Nothing found, try again'
+    text = _('search-results') if topics['status'] and len(topics['data']) > 0 else _('nothing-found')
     update.message.reply_text(text=text, reply_markup=reply_markup)
     context.user_data[START_OVER] = False
 
@@ -187,7 +193,7 @@ def search_topic(update, context):
 def create_topic_intro(update, context):
     logger.info('New topic intro')
 
-    text = 'Okay, type the new topic name'
+    text = _('type-new-topic-name')
     update.callback_query.edit_message_text(text=text)
     return CREATE_TOPIC
 
@@ -195,7 +201,7 @@ def create_topic_intro(update, context):
 def lookup_story_intro(update, context):
     logger.info('Lookup story intro')
 
-    text = 'Input story ID'
+    text = _('input-story-id')
     update.callback_query.edit_message_text(text=text)
     return LOOKUP_STORY
 
@@ -205,7 +211,7 @@ def create_topic(update, context):
 
     topic = logbook.create_topic(update.message.text)
     if topic['status']:
-        context.user_data['flash'] = 'New topic was created'
+        context.user_data['flash'] = _('new-topic-created')
     else:
         context.user_data['flash'] = topic['error']
     return start(update, context)
@@ -214,7 +220,7 @@ def create_topic(update, context):
 def edit_story_intro(update, context):
     logger.info('Edit story description intro')
 
-    text = 'Input story description'
+    text = _('input-story-description')
     update.callback_query.edit_message_text(text=text)
     return UPDATE_STORY
 
@@ -226,26 +232,26 @@ def lookup_story(update, context):
         story_id = int(update.message.text)
         context.user_data['story_id'] = story_id
         story = logbook.lookup_story(story_id)
-    except ValueError as _:
+    except ValueError as err:
         story_id = update.message.text
         story = {
             'status': False,
-            'error': 'Invalid story ID'
+            'error': _('invalid-story-id')
         }
 
     if story['status']:
-        text = f"Story #{story['data']['id']}"
+        text = f"{_('story')} #{story['data']['id']}"
         buttons = [[
-            InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_STORY),
-            InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
-            InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
+            InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_STORY),
+            InlineKeyboardButton(text=_('edit'), callback_data=CALLBACK_EDIT),
+            InlineKeyboardButton(text=_('back'), callback_data=CALLBACK_BACK)
         ]]
     else:
         text = f'Story {story_id} was not found'
         logger.info('Lookup story error %s', story['error'])
         buttons = [[
-            InlineKeyboardButton(text='Lookup again', callback_data=CALLBACK_LOOKUP),
-            InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
+            InlineKeyboardButton(text=_('lookup-again'), callback_data=CALLBACK_LOOKUP),
+            InlineKeyboardButton(text=_('back'), callback_data=CALLBACK_BACK)
         ]]
 
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -261,14 +267,14 @@ def update_story(update, context):
     story_description = update.message.text
     result = logbook.update_story(story_id, {'description': story_description})
     if result['status']:
-        text = f"Successfully Updated.\n{result['data']['description']}"
+        text = f"{_('successfully-updated')}\n{result['data']['description']}"
     else:
-        text = f'Could not update the story. Please try again.\n{story_description}'
+        text = _('could-not-update-story')
         logger.error(f"Update story. {result['error']}")
     buttons = [[
-        InlineKeyboardButton(text='Remove', callback_data=CALLBACK_REMOVE_STORY),
-        InlineKeyboardButton(text='Edit', callback_data=CALLBACK_EDIT),
-        InlineKeyboardButton(text='Back', callback_data=CALLBACK_BACK)
+        InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_STORY),
+        InlineKeyboardButton(text=_('edit'), callback_data=CALLBACK_EDIT),
+        InlineKeyboardButton(text=_('back'), callback_data=CALLBACK_BACK)
     ]]
 
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -283,9 +289,9 @@ def remove_story(update, context):
     story_id = context.user_data.pop('story_id', None)
     result = logbook.remove_story(story_id)
     if result['status']:
-        context.user_data['flash'] = f'Story #{story_id} was removed'
+        context.user_data['flash'] = _('story-removed')
     else:
-        context.user_data['flash'] = f'Could not remove the story #{story_id}'
+        context.user_data['flash'] = _('could-not-remove-story')
         logger.error(f"Remove story. {result['error']}")
     return close_story(update, context)
 
@@ -296,9 +302,9 @@ def remove_topic(update, context):
     topic_id = context.user_data.pop('topic_id', None)
     result = logbook.remove_topic(topic_id)
     if result['status']:
-        context.user_data['flash'] = f'Topic #{topic_id} was removed'
+        context.user_data['flash'] = _('topic-removed')
     else:
-        context.user_data['flash'] = f'Could not remove the topic #{topic_id}'
+        context.user_data['flash'] = _('could-not-remove-topic')
         logger.error(f"Remove topic. {result['error']}")
     return close_topic(update, context)
 
@@ -325,7 +331,7 @@ def video_story(update, context):
     result = logbook.create_story(data)
 
     if result['status']:
-        context.user_data['flash'] = 'Story created'
+        context.user_data['flash'] = _('story-created')
     else:
         logger.error(f"Text story create. {result['error']}")
 
@@ -347,7 +353,7 @@ def photo_story(update, context):
     result = logbook.create_story(data)
 
     if result['status']:
-        context.user_data['flash'] = 'Story created'
+        context.user_data['flash'] = _('story-created')
     else:
         logger.error(f"Text story create. {result['error']}")
 
@@ -368,7 +374,7 @@ def text_story(update, context):
     result = logbook.create_story(data)
 
     if result['status']:
-        context.user_data['flash'] = 'Story created'
+        context.user_data['flash'] = _('story-created')
     else:
         logger.error(f"Text story create. {result['error']}")
 
@@ -380,15 +386,15 @@ def ask_for_story(update, context):
     logger.info('Asking for story')
 
     if update.callback_query.data == CALLBACK_TEXT:
-        text = 'Tell your story'
+        text = _('input-text-story')
         update.callback_query.edit_message_text(text=text)
         return TEXT_STORY
     elif update.callback_query.data == CALLBACK_VIDEO:
-        text = 'Attach video'
+        text = _('input-video-story')
         update.callback_query.edit_message_text(text=text)
         return VIDEO_STORY
     elif update.callback_query.data == CALLBACK_PHOTO:
-        text = 'Attach photo'
+        text = _('input-photo-story')
         update.callback_query.edit_message_text(text=text)
         return PHOTO_STORY
 
@@ -403,7 +409,7 @@ def close_story(update, context):
 def close_nested(update, context):
     logger.info('Close nested')
 
-    update.message.reply_text('Okay, bye.')
+    update.message.reply_text(_('bye'))
     return STOPPING
 
 
