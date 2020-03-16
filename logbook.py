@@ -4,136 +4,83 @@ from requests.exceptions import HTTPError
 import settings
 
 
-def create_user(user):
-    url = f'{settings.API_HOST}/users/?format=json'
-    try:
-        response = requests.post(url, data=user)
-        response.raise_for_status()
-    except HTTPError as http_err:
-        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
-    except Exception as err:
-        return {'status': False, 'error': f'API error occurred: {err}'}
-    else:
-        data = json.loads(response.text)
-        return {'status': True, 'data': data}
+GET = 'get'
+POST = 'post'
+PUT = 'put'
+DELETE = 'delete'
 
 
 def get_telegram_user(id):
     url = f'{settings.API_HOST}/users?search={id}&format=json'
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-    except HTTPError as http_err:
-        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
-    except Exception as err:
-        return {'status': False, 'error': f'API error occurred: {err}'}
-    else:
-        data = json.loads(response.text)
-        if len(data) == 0:
-            return {'status': False}
+    user = api(GET, url)
+    if user['status']:
+        if len(user['data']) == 0:
+            user['status'] = False
         else:
-            return {'status': True, 'data': data[0]}
+            user['data'] = user['data'][0]
+    return user
 
 
 def get_latest_topics():
     url = f'{settings.API_HOST}/topics?format=json'
-    return api(url)
+    return api(GET, url)
 
 
 def search_topics(title):
     url = f'{settings.API_HOST}/topics?search={title}&format=json'
-    return api(url)
+    return api(GET, url)
 
 
 def get_topic_stories(topic_id):
     url = f'{settings.API_HOST}/stories/?topic={topic_id}&format=json'
-    return api(url)
-
-
-def get_topic_stories_count(topic_id):
-    stories = get_topic_stories(topic_id)
-    count = 0
-    if stories['status']:
-        count = len(stories['data'])
-    return count
+    return api(GET, url)
 
 
 def lookup_story(id):
     url = f'{settings.API_HOST}/stories/{id}?format=json'
-    return api(url)
+    return api(GET, url)
+
+
+def create_user(user):
+    url = f'{settings.API_HOST}/users/?format=json'
+    return api(POST, url, user)
 
 
 def remove_story(id):
     url = f'{settings.API_HOST}/stories/{id}/?format=json'
-    try:
-        response = requests.delete(url)
-        response.raise_for_status()
-    except HTTPError as http_err:
-        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
-    except Exception as err:
-        return {'status': False, 'error': f'API error occurred: {err}'}
-    else:
-        return {'status': True}
+    return api(DELETE, url)
 
 
 def remove_topic(id):
     url = f'{settings.API_HOST}/topics/{id}/?format=json'
-    try:
-        response = requests.delete(url)
-        response.raise_for_status()
-    except HTTPError as http_err:
-        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
-    except Exception as err:
-        return {'status': False, 'error': f'API error occurred: {err}'}
-    else:
-        return {'status': True}
+    return api(DELETE, url)
 
 
 def update_story(id, data):
     url = f'{settings.API_HOST}/stories/{id}/?format=json'
-    try:
-        response = requests.put(url, data=data)
-        response.raise_for_status()
-    except HTTPError as http_err:
-        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
-    except Exception as err:
-        return {'status': False, 'error': f'API error occurred: {err}'}
-    else:
-        data = json.loads(response.text)
-        return {'status': True, 'data': data}
+    return api(PUT, url, data)
 
 
 def create_topic(title):
     url = f'{settings.API_HOST}/topics/?format=json'
-    try:
-        response = requests.post(url, data={'title': title})
-        response.raise_for_status()
-    except HTTPError as http_err:
-        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
-    except Exception as err:
-        return {'status': False, 'error': f'API error occurred: {err}'}
-    else:
-        data = json.loads(response.text)
-        return {'status': True, 'data': data}
+    return api(POST, url, {'title': title})
 
 
 def create_story(story):
     url = f'{settings.API_HOST}/stories/?format=json'
-    try:
-        response = requests.post(url, data=story)
-        response.raise_for_status()
-    except HTTPError as http_err:
-        return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
-    except Exception as err:
-        return {'status': False, 'error': f'API error occurred: {err}'}
-    else:
-        data = json.loads(response.text)
-        return {'status': True, 'data': data}
+    return api(POST, url, story)
 
 
-def api(url):
+def api(method, url, data=None):
     try:
-        response = requests.get(url)
+        if method == 'post':
+            response = requests.post(url, data=data)
+        elif method == 'put':
+            response = requests.put(url, data=data)
+        elif method == 'delete':
+            response = requests.delete(url)
+        else:
+            response = requests.get(url)
         response.raise_for_status()
     except HTTPError as http_err:
         return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
@@ -146,3 +93,11 @@ def api(url):
 
 def get_topic_by_id(topics, id):
     return next((topic for topic in topics if topic['id'] == id), None)
+
+
+def get_topic_stories_count(topic_id):
+    stories = get_topic_stories(topic_id)
+    count = 0
+    if stories['status']:
+        count = len(stories['data'])
+    return count
