@@ -1,4 +1,3 @@
-import os
 import logging
 import logbook
 import gettext
@@ -12,30 +11,23 @@ trans = gettext.translation('bot', './i18n', languages=[settings.LANG], fallback
 trans.install()
 
 # logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+loggingLevel = logging.getLevelName(settings.LOGGING_LEVEL)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=loggingLevel)
 logger = logging.getLogger(__name__)
 
+# stories types
 TYPE_PHOTO = 1
 TYPE_ALBUM = 2
 TYPE_VIDEO = 3
 TYPE_TEXT = 4
 
-# Main states
-REGISTER, SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC_INTRO, CREATE_TOPIC, EDIT_TOPIC, LOOKUP_STORY = range(7)
+# main states
+REGISTER, SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC_INTRO, CREATE_TOPIC, EDIT_TOPIC, LOOKUP_STORY, STOPPING = range(8)
 
-# Stories states
-SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY, UPDATE_STORY = range(8, 14)
+# stories states
+SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY, UPDATE_STORY = range(9, 15)
 
-# Constants
-TOPIC_START_OVER, START_OVER = range(15, 17)
-
-# Meta states
-STOPPING, SHOWING = range(18, 20)
-
-# Shortcut for ConversationHandler.END
-END = ConversationHandler.END
-
-# Callbacks
+# callbacks
 CALLBACK_VIDEO = 'video'
 CALLBACK_PHOTO = 'photo'
 CALLBACK_TEXT = 'text'
@@ -47,21 +39,20 @@ CALLBACK_LOOKUP = 'lookup'
 CALLBACK_REMOVE_TOPIC = 'remove_topic'
 CALLBACK_REMOVE_STORY = 'remove_story'
 
-# Commands
+# commands
 COMMAND_START = 'start'
 COMMAND_EXIT = 'exit'
 
 
 def start(update, context):
-    logger.info('Starting')
+    logger.debug('Starting')
 
     if not context.user_data.get('user'):
-        logger.info(f'Fetch user from API #{update.effective_user.id}')
         user = logbook.get_telegram_user(update.effective_user.id)
         if user['status']:
             context.user_data['user'] = user['data']
         else:
-            return greeting(update, context)
+            return register_intro(update)
 
     buttons = []
     topics = logbook.get_latest_topics()
@@ -78,26 +69,26 @@ def start(update, context):
     reply_markup = InlineKeyboardMarkup(buttons)
     text = context.user_data.pop('flash', _('latest-topics'))
 
-    if context.user_data.get(START_OVER):
+    if context.user_data.get('start_over'):
         update.callback_query.edit_message_text(text=text, reply_markup=reply_markup)
     else:
         update.message.reply_text(text=text, reply_markup=reply_markup)
 
-    context.user_data[START_OVER] = False
+    context.user_data['start_over'] = False
 
     return SELECT_TOPIC
 
 
-def greeting(update, context):
-    logger.info('Greeting')
+def register_intro(update):
+    logger.debug('Registration intro')
 
-    text = _('greetings') + '\n' + _('input-registration-code')
+    text = _('registration') + '\n' + _('input-registration-code')
     update.message.reply_text(text=text)
     return REGISTER
 
 
 def register(update, context):
-    logger.info('Register')
+    logger.debug('Registration')
 
     if update.message.text == settings.REGISTRATION_CODE:
         data = {
@@ -111,8 +102,8 @@ def register(update, context):
             context.user_data['user'] = result['data']
             return start(update, context)
         else:
-            logger.error(_('registration-error') + '\n' + result['error'])
-            return END
+            logger.error(f"Registration \n {result['error']}")
+            return ConversationHandler.END
     else:
         text = _('wrong-registration-code')
         update.message.reply_text(text=text)
@@ -120,9 +111,9 @@ def register(update, context):
 
 
 def edit_topic(update, context):
-    logger.info('Editing topic')
+    logger.debug('Editing topic')
 
-    if context.user_data.get(TOPIC_START_OVER):
+    if context.user_data.get('topic_start_over'):
         topic_id = context.user_data.get('topic_id')
         topic = logbook.get_topic_by_id(context.user_data.get('topics'), topic_id)
         stories_count = logbook.get_topic_stories_count(topic_id)
@@ -135,7 +126,10 @@ def edit_topic(update, context):
         if stories_count == 0:
             buttons[1].append(InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_TOPIC))
         reply_markup = InlineKeyboardMarkup(buttons)
-        text = f"{topic['title']} ({stories_count})"
+        text = _('topic-info {topic_title} {stories_count}').format(
+            topic_title=topic['title'],
+            stories_count=stories_count
+        )
         update.message.reply_text(text=text, reply_markup=reply_markup)
     else:
         topic_id = int(update.callback_query.data)
@@ -151,16 +145,19 @@ def edit_topic(update, context):
         if stories_count == 0:
             buttons[1].append(InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_TOPIC))
         reply_markup = InlineKeyboardMarkup(buttons)
-        text = f"{topic['title']} ({stories_count})"
+        text = _('topic-info {topic_title} {stories_count}').format(
+            topic_title=topic['title'],
+            stories_count=stories_count
+        )
         update.callback_query.edit_message_text(text=text, reply_markup=reply_markup)
 
-    context.user_data[TOPIC_START_OVER] = False
+    context.user_data['topic_start_over'] = False
 
     return SELECT_STORY_TYPE
 
 
 def search_topic_intro(update, context):
-    logger.info('Search topic intro')
+    logger.debug('Search topic intro')
 
     text = _('type-topic-name-to-search')
     update.callback_query.edit_message_text(text=text)
@@ -168,7 +165,7 @@ def search_topic_intro(update, context):
 
 
 def search_topic(update, context):
-    logger.info('Searching for topic')
+    logger.debug('Searching for topic')
 
     buttons = []
     topics = logbook.search_topics(update.message.text)
@@ -185,13 +182,13 @@ def search_topic(update, context):
     reply_markup = InlineKeyboardMarkup(buttons)
     text = _('search-results') if topics['status'] and len(topics['data']) > 0 else _('nothing-found')
     update.message.reply_text(text=text, reply_markup=reply_markup)
-    context.user_data[START_OVER] = False
+    context.user_data['start_over'] = False
 
     return SELECT_TOPIC
 
 
 def create_topic_intro(update, context):
-    logger.info('New topic intro')
+    logger.debug('New topic intro')
 
     text = _('type-new-topic-name')
     update.callback_query.edit_message_text(text=text)
@@ -199,7 +196,7 @@ def create_topic_intro(update, context):
 
 
 def lookup_story_intro(update, context):
-    logger.info('Lookup story intro')
+    logger.debug('Lookup story intro')
 
     text = _('input-story-id')
     update.callback_query.edit_message_text(text=text)
@@ -207,7 +204,7 @@ def lookup_story_intro(update, context):
 
 
 def create_topic(update, context):
-    logger.info('Saving new topic %s', update.message.text)
+    logger.debug('Create new topic')
 
     topic = logbook.create_topic(update.message.text)
     if topic['status']:
@@ -218,7 +215,7 @@ def create_topic(update, context):
 
 
 def edit_story_intro(update, context):
-    logger.info('Edit story description intro')
+    logger.debug('Edit story description intro')
 
     text = _('input-story-description')
     update.callback_query.edit_message_text(text=text)
@@ -226,7 +223,7 @@ def edit_story_intro(update, context):
 
 
 def lookup_story(update, context):
-    logger.info('Lookup story ID: %s', update.message.text)
+    logger.debug('Lookup story')
 
     try:
         story_id = int(update.message.text)
@@ -240,15 +237,18 @@ def lookup_story(update, context):
         }
 
     if story['status']:
-        text = f"{_('story')} #{story['data']['id']}"
+        text = _('story-info {id} {description}').format(
+            id=story['data']['id'],
+            description=story['data']['description']
+        )
         buttons = [[
             InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_STORY),
             InlineKeyboardButton(text=_('edit'), callback_data=CALLBACK_EDIT),
             InlineKeyboardButton(text=_('back'), callback_data=CALLBACK_BACK)
         ]]
     else:
-        text = f'Story {story_id} was not found'
-        logger.info('Lookup story error %s', story['error'])
+        text = _('story-not-found {id}').format(id=story_id)
+        logger.error(f"Lookup story {story['error']}")
         buttons = [[
             InlineKeyboardButton(text=_('lookup-again'), callback_data=CALLBACK_LOOKUP),
             InlineKeyboardButton(text=_('back'), callback_data=CALLBACK_BACK)
@@ -261,16 +261,16 @@ def lookup_story(update, context):
 
 
 def update_story(update, context):
-    logger.info('Update story', update.message.text)
+    logger.debug('Update story', update.message.text)
 
     story_id = context.user_data.get('story_id')
     story_description = update.message.text
     result = logbook.update_story(story_id, {'description': story_description})
     if result['status']:
-        text = f"{_('successfully-updated')}\n{result['data']['description']}"
+        text = _('story-successfully-updated {id}').format(id=story_id)
     else:
-        text = _('could-not-update-story')
-        logger.error(f"Update story. {result['error']}")
+        text = _('could-not-update-story {id}').format(id=story_id)
+        logger.error(f"Update story {result['error']}")
     buttons = [[
         InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_STORY),
         InlineKeyboardButton(text=_('edit'), callback_data=CALLBACK_EDIT),
@@ -284,41 +284,41 @@ def update_story(update, context):
 
 
 def remove_story(update, context):
-    logger.info('Remove story')
+    logger.debug('Remove story')
 
     story_id = context.user_data.pop('story_id', None)
     result = logbook.remove_story(story_id)
     if result['status']:
-        context.user_data['flash'] = _('story-removed')
+        context.user_data['flash'] = _('story-removed {id}').format(id=story_id)
     else:
-        context.user_data['flash'] = _('could-not-remove-story')
-        logger.error(f"Remove story. {result['error']}")
+        context.user_data['flash'] = _('could-not-remove-story {id}').format(id=story_id)
+        logger.error(f"Remove story {result['error']}")
     return close_story(update, context)
 
 
 def remove_topic(update, context):
-    logger.info('Remove topic')
+    logger.debug('Remove topic')
 
     topic_id = context.user_data.pop('topic_id', None)
     result = logbook.remove_topic(topic_id)
     if result['status']:
-        context.user_data['flash'] = _('topic-removed')
+        context.user_data['flash'] = _('topic-removed {id}').format(id=topic_id)
     else:
-        context.user_data['flash'] = _('could-not-remove-topic')
-        logger.error(f"Remove topic. {result['error']}")
+        context.user_data['flash'] = _('could-not-remove-topic {id}').format(id=topic_id)
+        logger.error(f"Remove topic {result['error']}")
     return close_topic(update, context)
 
 
 def close_topic(update, context):
-    logger.info('Closing topic')
+    logger.debug('Closing topic')
 
-    context.user_data[START_OVER] = True
+    context.user_data['start_over'] = True
     start(update, context)
-    return END
+    return ConversationHandler.END
 
 
 def video_story(update, context):
-    logger.info('Video story')
+    logger.debug('Video story')
 
     video_file = update.message.video.get_file()
     data = {
@@ -331,16 +331,19 @@ def video_story(update, context):
     result = logbook.create_story(data)
 
     if result['status']:
-        context.user_data['flash'] = _('story-created')
+        context.user_data['flash'] = _('story-created {id} {description}').format(
+            id=result['data']['id'],
+            description=result['data']['description']
+        )
     else:
-        logger.error(f"Text story create. {result['error']}")
+        logger.error(f"Text story create {result['error']}")
 
-    context.user_data[TOPIC_START_OVER] = True
+    context.user_data['topic_start_over'] = True
     return edit_topic(update, context)
 
 
 def photo_story(update, context):
-    logger.info('Photo story')
+    logger.debug('Photo story')
 
     photo_file = update.message.photo[-1].get_file()
     data = {
@@ -353,16 +356,19 @@ def photo_story(update, context):
     result = logbook.create_story(data)
 
     if result['status']:
-        context.user_data['flash'] = _('story-created')
+        context.user_data['flash'] = _('story-created {id} {description}').format(
+            id=result['data']['id'],
+            description=result['data']['description']
+        )
     else:
-        logger.error(f"Text story create. {result['error']}")
+        logger.error(f"Text story create {result['error']}")
 
-    context.user_data[TOPIC_START_OVER] = True
+    context.user_data['topic_start_over'] = True
     return edit_topic(update, context)
 
 
 def text_story(update, context):
-    logger.info('Saving text story: %s', update.message.text)
+    logger.debug('Saving text story')
 
     data = {
         'type': TYPE_TEXT,
@@ -374,16 +380,16 @@ def text_story(update, context):
     result = logbook.create_story(data)
 
     if result['status']:
-        context.user_data['flash'] = _('story-created')
+        context.user_data['flash'] = _('story-created {id}').format(id=result['data']['id'])
     else:
-        logger.error(f"Text story create. {result['error']}")
+        logger.error(f"Text story create {result['error']}")
 
-    context.user_data[TOPIC_START_OVER] = True
+    context.user_data['topic_start_over'] = True
     return edit_topic(update, context)
 
 
 def ask_for_story(update, context):
-    logger.info('Asking for story')
+    logger.debug('Asking for story')
 
     if update.callback_query.data == CALLBACK_TEXT:
         text = _('input-text-story')
@@ -400,26 +406,26 @@ def ask_for_story(update, context):
 
 
 def close_story(update, context):
-    logger.info('Closing story')
+    logger.debug('Closing story')
 
-    context.user_data[START_OVER] = True
+    context.user_data['start_over'] = True
     return start(update, context)
 
 
 def close_nested(update, context):
-    logger.info('Close nested')
+    logger.debug('Close nested')
 
     update.message.reply_text(_('bye'))
     return STOPPING
 
 
 def end(update, context):
-    logger.info('Exit')
-    return END
+    logger.debug('Exit')
+    return ConversationHandler.END
 
 
 def error(update, context):
-    logger.error('%s with update \n%s', context.error, update)
+    logger.error(f'{context.error} with update \n{update}')
 
 
 def main():
@@ -444,7 +450,7 @@ def main():
         ],
         map_to_parent={
             STOPPING: STOPPING,
-            END: SELECT_TOPIC
+            ConversationHandler.END: SELECT_TOPIC
         }
     )
 
