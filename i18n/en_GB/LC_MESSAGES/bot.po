@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "POT-Creation-Date: 2020-03-16 14:22+0200\n"
-"PO-Revision-Date: 2020-03-16 14:57+0200\n"
+"PO-Revision-Date: 2020-03-17 16:21+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: en_001\n"
@@ -20,7 +20,7 @@ msgstr "Search topic"
 
 #: bot.py:65 bot.py:178
 msgid "new-topic"
-msgstr "Create new topic"
+msgstr "New topic"
 
 #: bot.py:66 bot.py:179
 msgid "lookup-story"
@@ -28,7 +28,7 @@ msgstr "Lookup story"
 
 #: bot.py:70
 msgid "latest-topics"
-msgstr "Latest topics"
+msgstr "Topics"
 
 #: bot.py:85
 msgid "registration"
