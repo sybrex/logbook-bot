@@ -73,11 +73,11 @@ def create_story(story):
 
 def api(method, url, data=None):
     try:
-        if method == 'post':
+        if method == POST:
             response = requests.post(url, data=data)
-        elif method == 'put':
+        elif method == PUT:
             response = requests.put(url, data=data)
-        elif method == 'delete':
+        elif method == DELETE:
             response = requests.delete(url)
         else:
             response = requests.get(url)
@@ -87,7 +87,7 @@ def api(method, url, data=None):
     except Exception as err:
         return {'status': False, 'error': f'API error occurred: {err}'}
     else:
-        data = json.loads(response.text)
+        data = json.loads(response.text) if response.text else None
         return {'status': True, 'data': data}
 
 

@@ -22,26 +22,19 @@ TYPE_VIDEO = 3
 TYPE_TEXT = 4
 
 # main states
-REGISTER, SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC_INTRO, CREATE_TOPIC, EDIT_TOPIC, LOOKUP_STORY, STOPPING = range(8)
+REGISTER, SELECT_TOPIC, SEARCH_TOPIC, CREATE_TOPIC, EDIT_TOPIC, LOOKUP_STORY, STOPPING = map(chr, range(7))
 
 # stories states
-SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY, UPDATE_STORY = range(9, 15)
+SELECT_STORY_TYPE, EDIT_STORY, VIDEO_STORY, PHOTO_STORY, TEXT_STORY, UPDATE_STORY = map(chr, range(8, 14))
 
 # callbacks
-CALLBACK_VIDEO = 'video'
-CALLBACK_PHOTO = 'photo'
-CALLBACK_TEXT = 'text'
-CALLBACK_BACK = 'back'
-CALLBACK_EDIT = 'edit'
-CALLBACK_SEARCH = 'search'
-CALLBACK_NEW = 'new'
-CALLBACK_LOOKUP = 'lookup'
-CALLBACK_REMOVE_TOPIC = 'remove_topic'
-CALLBACK_REMOVE_STORY = 'remove_story'
+(CALLBACK_VIDEO, CALLBACK_PHOTO, CALLBACK_TEXT, CALLBACK_BACK, CALLBACK_EDIT, CALLBACK_SEARCH, CALLBACK_NEW,
+ CALLBACK_LOOKUP, CALLBACK_REMOVE_TOPIC, CALLBACK_REMOVE_STORY) = map(chr, range(14, 24))
 
 # commands
 COMMAND_START = 'start'
 COMMAND_EXIT = 'exit'
+COMMAND_HELP = 'help'
 
 
 def start(update, context):
@@ -421,7 +414,25 @@ def close_nested(update, context):
 
 def end(update, context):
     logger.debug('Exit')
+
+    update.message.reply_text(_('bye'))
     return ConversationHandler.END
+
+
+def help(update, context):
+    logger.debug('Help')
+
+    text = _('help {site}').format(site=settings.SITE)
+    update.message.reply_text(text=text)
+    return ConversationHandler.END
+
+
+def close_nested_help(update, context):
+    logger.debug('Close nested help')
+
+    text = _('help {site}').format(site=settings.SITE)
+    update.message.reply_text(text=text)
+    return STOPPING
 
 
 def error(update, context):
@@ -446,7 +457,8 @@ def main():
             TEXT_STORY: [MessageHandler(Filters.text, text_story)]
         },
         fallbacks=[
-            CommandHandler(COMMAND_EXIT, close_nested)
+            CommandHandler(COMMAND_EXIT, close_nested),
+            CommandHandler(COMMAND_HELP, close_nested_help),
         ],
         map_to_parent={
             STOPPING: STOPPING,
@@ -476,7 +488,10 @@ def main():
             LOOKUP_STORY: [MessageHandler(Filters.text, lookup_story)],
             UPDATE_STORY: [MessageHandler(Filters.text, update_story)],
         },
-        fallbacks=[CommandHandler(COMMAND_EXIT, end)]
+        fallbacks=[
+            CommandHandler(COMMAND_EXIT, end),
+            CommandHandler(COMMAND_HELP, help)
+        ]
     )
 
     main_conv.states[STOPPING] = main_conv.entry_points

@@ -13,3 +13,4 @@ REGISTRATION_CODE = env['telegram']['code']
 
 LANG = env['settings']['language']
 LOGGING_LEVEL = env['settings']['logging_level']
+SITE = env['settings']['site']
