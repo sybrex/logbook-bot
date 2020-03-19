@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2020-03-16 14:22+0200\n"
-"PO-Revision-Date: 2020-03-17 16:21+0200\n"
+"POT-Creation-Date: 2020-03-19 10:56+0200\n"
+"PO-Revision-Date: 2020-03-19 10:56+0200\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: en_001\n"
@@ -14,165 +14,178 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Poedit-SearchPath-0: bot.py\n"
 
-#: bot.py:64 bot.py:177
+#: bot.py:59 bot.py:175
 msgid "search-topic"
 msgstr "Search topic"
 
-#: bot.py:65 bot.py:178
+#: bot.py:60 bot.py:176
 msgid "new-topic"
 msgstr "New topic"
 
-#: bot.py:66 bot.py:179
+#: bot.py:61 bot.py:177
 msgid "lookup-story"
 msgstr "Lookup story"
 
-#: bot.py:70
+#: bot.py:65
 msgid "latest-topics"
 msgstr "Topics"
 
-#: bot.py:85
+#: bot.py:80
 msgid "registration"
 msgstr "Greetings! "
 
-#: bot.py:85
+#: bot.py:80
 msgid "input-registration-code"
 msgstr "Input registration code"
 
-#: bot.py:105
-msgid "registration-error"
-msgstr "Registration error"
-
-#: bot.py:108
+#: bot.py:103
 msgid "wrong-registration-code"
 msgstr "Wrong registration code"
 
-#: bot.py:121 bot.py:140
+#: bot.py:116 bot.py:138
 msgid "video"
 msgstr "Video"
 
-#: bot.py:122 bot.py:141
+#: bot.py:117 bot.py:139
 msgid "photo"
 msgstr "Photo"
 
-#: bot.py:123 bot.py:142
+#: bot.py:118 bot.py:140
 msgid "text"
 msgstr "Text"
 
-#: bot.py:124 bot.py:143 bot.py:247 bot.py:254 bot.py:277
+#: bot.py:119 bot.py:141 bot.py:255 bot.py:262 bot.py:285
 msgid "back"
 msgstr "Back"
 
-#: bot.py:127 bot.py:146 bot.py:245 bot.py:275
+#: bot.py:122 bot.py:144 bot.py:253 bot.py:283
 msgid "remove"
 msgstr "Remove"
 
-#: bot.py:129 bot.py:148
+#: bot.py:124 bot.py:146
 #, python-brace-format
 msgid "topic-info {topic_title} {stories_count}"
 msgstr "Topic: {topic_title} ({stories_count})"
 
-#: bot.py:162
+#: bot.py:160
 msgid "type-topic-name-to-search"
 msgstr "Type topic name to search"
 
-#: bot.py:183
+#: bot.py:181
 msgid "search-results"
 msgstr "Search results"
 
-#: bot.py:183
+#: bot.py:181
 msgid "nothing-found"
 msgstr "Nothing found"
 
-#: bot.py:193
+#: bot.py:191
 msgid "type-new-topic-name"
 msgstr "Input new topic name"
 
-#: bot.py:201
+#: bot.py:199
 msgid "input-story-id"
 msgstr "Input story ID"
 
-#: bot.py:211
+#: bot.py:209
 msgid "new-topic-created"
 msgstr "New topic created"
 
-#: bot.py:220
+#: bot.py:218
 msgid "input-story-description"
 msgstr "Input story description"
 
-#: bot.py:236
+#: bot.py:234
 msgid "invalid-story-id"
 msgstr "Invalid story ID"
 
-#: bot.py:240
+#: bot.py:238
 #, python-brace-format
 msgid "story-info {id} {description}"
 msgstr "Story #{id} {description}"
 
-#: bot.py:246 bot.py:276
+#: bot.py:254 bot.py:284
 msgid "edit"
 msgstr "Edit"
 
-#: bot.py:250
+#: bot.py:258
 #, python-brace-format
 msgid "story-not-found {id}"
 msgstr "Story not found #{id}"
 
-#: bot.py:253
+#: bot.py:261
 msgid "lookup-again"
 msgstr "Lookup again"
 
-#: bot.py:270
+#: bot.py:278
 #, python-brace-format
 msgid "story-successfully-updated {id}"
 msgstr "Story updated #{id}"
 
-#: bot.py:272
+#: bot.py:280
 #, python-brace-format
 msgid "could-not-update-story {id}"
 msgstr "Could not update story #{id}"
 
-#: bot.py:292
+#: bot.py:300
 #, python-brace-format
 msgid "story-removed {id}"
 msgstr "Story removed #{id}"
 
-#: bot.py:294
+#: bot.py:302
 #, python-brace-format
 msgid "could-not-remove-story {id}"
 msgstr "Could not remove story #{id}"
 
-#: bot.py:305
+#: bot.py:313
 #, python-brace-format
 msgid "topic-removed {id}"
 msgstr "Topic removed #{id}"
 
-#: bot.py:307
+#: bot.py:315
 #, python-brace-format
 msgid "could-not-remove-topic {id}"
 msgstr "Could not remove topic #{id}"
 
-#: bot.py:334 bot.py:359
+#: bot.py:342 bot.py:367
 #, python-brace-format
 msgid "story-created {id} {description}"
 msgstr "Story created #{id} {description}"
 
-#: bot.py:383
+#: bot.py:391
 #, python-brace-format
 msgid "story-created {id}"
 msgstr "Story created #{id}"
 
-#: bot.py:395
+#: bot.py:403
 msgid "input-text-story"
 msgstr "Input text story"
 
-#: bot.py:399
+#: bot.py:407
 msgid "input-video-story"
 msgstr "Attach video"
 
-#: bot.py:403
+#: bot.py:411
 msgid "input-photo-story"
 msgstr "Attach photo"
 
-#: bot.py:418
+#: bot.py:419
+msgid "invalid-attachment"
+msgstr "Invalid attachment file format"
+
+#: bot.py:434 bot.py:441
 msgid "bye"
 msgstr "See you later"
+
+#: bot.py:448 bot.py:456
+#, python-brace-format
+msgid "help {site}"
+msgstr ""
+"Commands:\n"
+"/start - to start conversation\n"
+"/exit - stop conversation any time (doesn't work when you input topic/"
+"story)\n"
+"Site: {site}"
+
+#~ msgid "registration-error"
+#~ msgstr "Registration error"

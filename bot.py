@@ -36,6 +36,8 @@ COMMAND_START = 'start'
 COMMAND_EXIT = 'exit'
 COMMAND_HELP = 'help'
 
+PHOTO_SIZE = 640
+
 
 def start(update, context):
     logger.debug('Starting')
@@ -123,6 +125,9 @@ def edit_topic(update, context):
             topic_title=topic['title'],
             stories_count=stories_count
         )
+        flash = context.user_data.pop('flash')
+        if flash:
+            text = f'{flash}\n{text}'
         update.message.reply_text(text=text, reply_markup=reply_markup)
     else:
         topic_id = int(update.callback_query.data)
@@ -234,6 +239,16 @@ def lookup_story(update, context):
             id=story['data']['id'],
             description=story['data']['description']
         )
+        if story['data']['type'] == TYPE_TEXT:
+            text = f"{text}\n{story['data']['content']}"
+        elif story['data']['type'] == TYPE_PHOTO:
+            text = f"{text}\n{settings.SITE}/media/images/{PHOTO_SIZE}_{story['data']['content']}"
+        elif story['data']['type'] == TYPE_ALBUM:
+            # TODO
+            pass
+        elif story['data']['type'] == TYPE_VIDEO:
+            text = f"{text}\n{settings.SITE}/media/videos/{PHOTO_SIZE}_{story['data']['content']}"
+            pass
         buttons = [[
             InlineKeyboardButton(text=_('remove'), callback_data=CALLBACK_REMOVE_STORY),
             InlineKeyboardButton(text=_('edit'), callback_data=CALLBACK_EDIT),
@@ -398,6 +413,14 @@ def ask_for_story(update, context):
         return PHOTO_STORY
 
 
+def invalid_attachment(update, context):
+    logger.debug('Invalid attachement')
+
+    context.user_data['flash'] = _('invalid-attachment')
+    context.user_data['topic_start_over'] = True
+    return edit_topic(update, context)
+
+
 def close_story(update, context):
     logger.debug('Closing story')
 
@@ -427,7 +450,7 @@ def help(update, context):
     return ConversationHandler.END
 
 
-def close_nested_help(update, context):
+def nested_help(update, context):
     logger.debug('Close nested help')
 
     text = _('help {site}').format(site=settings.SITE)
@@ -452,13 +475,20 @@ def main():
                 CallbackQueryHandler(remove_topic, pattern=f'^{CALLBACK_REMOVE_TOPIC}$'),
                 CallbackQueryHandler(close_topic, pattern=f'^{CALLBACK_BACK}$')
             ],
-            VIDEO_STORY: [MessageHandler(Filters.video, video_story)],
-            PHOTO_STORY: [MessageHandler(Filters.photo, photo_story)],
+            VIDEO_STORY: [
+                MessageHandler(Filters.video, video_story),
+                MessageHandler(Filters.photo, invalid_attachment),
+                MessageHandler(Filters.document, invalid_attachment)
+            ],
+            PHOTO_STORY: [
+                MessageHandler(Filters.photo, photo_story),
+                MessageHandler(Filters.document, invalid_attachment)
+            ],
             TEXT_STORY: [MessageHandler(Filters.text, text_story)]
         },
         fallbacks=[
             CommandHandler(COMMAND_EXIT, close_nested),
-            CommandHandler(COMMAND_HELP, close_nested_help),
+            CommandHandler(COMMAND_HELP, nested_help),
         ],
         map_to_parent={
             STOPPING: STOPPING,
