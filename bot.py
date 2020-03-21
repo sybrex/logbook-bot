@@ -269,7 +269,7 @@ def lookup_story(update, context):
 
 
 def update_story(update, context):
-    logger.debug('Update story', update.message.text)
+    logger.debug('Update story')
 
     story_id = context.user_data.get('story_id')
     story_description = update.message.text
