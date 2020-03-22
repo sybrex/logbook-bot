@@ -72,15 +72,16 @@ def create_story(story):
 
 
 def api(method, url, data=None):
+    headers = {'Authorization': 'Token ' + settings.API_TOKEN}
     try:
         if method == POST:
-            response = requests.post(url, data=data)
+            response = requests.post(url, data=data, headers=headers)
         elif method == PUT:
-            response = requests.put(url, data=data)
+            response = requests.put(url, data=data, headers=headers)
         elif method == DELETE:
-            response = requests.delete(url)
+            response = requests.delete(url, headers=headers)
         else:
-            response = requests.get(url)
+            response = requests.get(url, headers=headers)
         response.raise_for_status()
     except HTTPError as http_err:
         return {'status': False, 'error': f'HTTP error occurred: {http_err}'}
