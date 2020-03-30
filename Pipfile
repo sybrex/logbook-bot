@@ -9,6 +9,7 @@ verify_ssl = true
 python-telegram-bot = "*"
 configparser = "*"
 requests = "*"
+fabric = "*"
 
 [requires]
 python_version = "3.7"
