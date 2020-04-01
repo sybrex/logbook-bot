@@ -5,7 +5,7 @@ from fabric.tasks import task
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 env = RawConfigParser()
-env.read(BASE_DIR + '/logbook/env.ini')
+env.read(BASE_DIR + '/env.ini')
 
 SYSTEMD_SERVICE = env['project']['systemd_service']
 USERNAME = env['project']['username']
