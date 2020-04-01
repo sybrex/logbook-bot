@@ -1,11 +1,17 @@
+import os
+from configparser import RawConfigParser
 from fabric.tasks import task
 
 
-SYSTEMD_SERVICE = 'logbook-bot'
-USERNAME = 'deployer'
-PROJECT_PATH = '/srv/www/logbook-bot'
-GIT_REPOSITORY = 'logbook-bot.github.com:sybrex/logbook-bot.git'
-GIT_KEY = '~/.ssh/github-deployer'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+env = RawConfigParser()
+env.read(BASE_DIR + '/logbook/env.ini')
+
+SYSTEMD_SERVICE = env['project']['systemd_service']
+USERNAME = env['project']['username']
+PROJECT_PATH = env['project']['path']
+GIT_REPOSITORY = env['project']['git_repository']
+GIT_KEY = env['project']['git_key']
 
 
 @task
